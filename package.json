@@ -1,0 +1,13 @@
+{
+  "name": "upgrade-remix",
+  "version": "0.1.0",
+  "description": "Command line utility to upgrade all Remix dependencies together",
+  "bin": "index.js",
+  "keywords": [
+    "remix",
+    "upgrade",
+    "npm"
+  ],
+  "author": "matt@brophy.org",
+  "license": "ISC"
+}
