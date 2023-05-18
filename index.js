@@ -7,7 +7,7 @@ const childProcess = require("child_process");
 const version = process.argv[2] || "latest";
 
 const packageJsonPath = path.join(process.cwd(), "package.json");
-if (!fs.existsSync(path.join(process.cwd(), "package-lock.json"))) {
+if (!fs.existsSync(packageJsonPath)) {
   throw new Error(
     "Could not find a package.json file! " +
       "Please run `npx upgrade-remix` from your root Remix app directory."
