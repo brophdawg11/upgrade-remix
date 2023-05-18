@@ -27,7 +27,11 @@ const implementations = {
   },
   yarn: {
     install: (packages, isDev) => `yarn add ${isDev ? "-D" : ""} ${packages}`,
-    sync: "yarn",
+    sync: "yarn install --frozen-lockfile",
+  },
+  pnpm: {
+    install: (packages, isDev) => `pnpm add ${isDev ? "-D" : ""} ${packages}`,
+    sync: "pnpm install --frozen-lockfile",
   },
 };
 
@@ -39,6 +43,9 @@ if (fs.existsSync(path.join(process.cwd(), "package-lock.json"))) {
 } else if (fs.existsSync(path.join(process.cwd(), "yarn.lock"))) {
   console.log("Found yarn.lock, using yarn");
   implementation = implementations.yarn;
+} else if (fs.existsSync(path.join(process.cwd(), "pnpm-lock.yaml"))) {
+  console.log("Found pnpm-lock.yaml, using pnpm");
+  implementation = implementations.pnpm;
 } else {
   throw new Error("Unsupported Package Manager");
 }
