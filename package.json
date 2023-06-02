@@ -2,12 +2,21 @@
   "name": "upgrade-remix",
   "version": "0.2.0",
   "description": "Command line utility to upgrade all Remix dependencies together",
+  "main": "index.js",
   "bin": "index.js",
+  "sideEffects": false,
   "keywords": [
     "remix",
     "upgrade",
     "npm"
   ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brophdawg11/upgrade-remix"
+  },
   "author": "matt@brophy.org",
   "license": "ISC"
 }
