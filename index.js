@@ -5,6 +5,7 @@ const path = require("path");
 const childProcess = require("child_process");
 
 const version = process.argv[2] || "latest";
+const isLooseVersion = /^[\^~]/.test(version);
 
 const packageJsonPath = path.join(process.cwd(), "package.json");
 if (!fs.existsSync(packageJsonPath)) {
@@ -22,15 +23,26 @@ const packageJson = require(packageJsonPath);
 const implementations = {
   npm: {
     install: (packages, isDev) =>
-      `npm install ${isDev ? "--save-dev" : "--save"} ${packages}`,
+      "npm install " +
+      (isDev ? "--save-dev " : "--save ") +
+      (isLooseVersion ? "" : "--save-exact ") +
+      packages,
     sync: "npm ci",
   },
   yarn: {
-    install: (packages, isDev) => `yarn add ${isDev ? "-D" : ""} ${packages}`,
+    install: (packages, isDev) =>
+      "yarn add " +
+      (isDev ? "--dev " : "") +
+      (isLooseVersion ? "" : "--exact ") +
+      packages,
     sync: "yarn install --frozen-lockfile",
   },
   pnpm: {
-    install: (packages, isDev) => `pnpm add ${isDev ? "-D" : ""} ${packages}`,
+    install: (packages, isDev) =>
+      "pnpm add " +
+      (isDev ? "--save-dev " : "") +
+      (isLooseVersion ? "" : "--save-exact ") +
+      packages,
     sync: "pnpm install --frozen-lockfile",
   },
 };
