@@ -55,6 +55,7 @@ function installUpdates(deps, isDev) {
     .filter(
       (k) =>
         (k.startsWith("@remix-run/") || k === "remix") &&
+        !k.startsWith("@remix-run/v1-") &&
         k !== "@remix-run/router"
     )
     .map((k) => `${k}@${version}`)
