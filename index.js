@@ -130,6 +130,9 @@ function listVersions() {
   let deps = [
     ...getDeps(packageJson.dependencies),
     ...getDeps(packageJson.devDependencies),
+    "@remix-run/router",
+    "react-router",
+    "react-router-dom",
   ];
   deps.forEach((dep) => {
     let cmd = implementation.list(dep);
