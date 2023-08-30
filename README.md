@@ -7,6 +7,7 @@
 - [`npm`](https://www.npmjs.com)
 - [`yarn`](https://yarnpkg.com)
 - [`pnpm`](https://pnpm.io)
+- [`bun`](https://bun.sh)
 
 PR's welcome to support additional package managers!
 

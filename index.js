@@ -13,6 +13,8 @@ if (!fs.existsSync(packageJsonPath)) {
   );
 }
 
+let isWindows = process.platform === "win32";
+
 const { args, version, implementation } = setup();
 
 if (args["list-versions"]) {
@@ -78,6 +80,17 @@ function getPackageManagerImplementation(v) {
       sync: "pnpm install --frozen-lockfile",
       list: (package) => `pnpm list ${package}`,
     },
+    bun: {
+      install: (packages, isDev) =>
+        "bun add " +
+        (isDev ? "--dev " : "") +
+        (isLooseVersion ? "" : "--exact ") +
+        packages,
+      sync: `bun install --frozen-lockfile`,
+      list: (package) => {
+        return `bun pm ls | ${isWindows ? "findstr" : "grep"} ${package}`;
+      },
+    },
   };
 
   if (fs.existsSync(path.join(process.cwd(), "package-lock.json"))) {
@@ -89,6 +102,9 @@ function getPackageManagerImplementation(v) {
   } else if (fs.existsSync(path.join(process.cwd(), "pnpm-lock.yaml"))) {
     console.log("Found pnpm-lock.yaml, using pnpm");
     return implementations.pnpm;
+  } else if (fs.existsSync(path.join(process.cwd(), "bun.lockb"))) {
+    console.log("Found bun.lockb, using bun");
+    return implementations.bun;
   } else {
     throw new Error("Unsupported Package Manager");
   }
