@@ -47,7 +47,7 @@ function getPackageManagerImplementation(v) {
           isLooseVersion ? undefined : "--save-exact",
           packages,
         ]
-          .filter((a) => a != undefined)
+          .filter((a) => a)
           .join(" "),
       sync: "npm ci",
       list: (package) => `npm ls ${package}`,
@@ -60,7 +60,7 @@ function getPackageManagerImplementation(v) {
           isLooseVersion ? undefined : "--exact",
           packages,
         ]
-          .filter((a) => a != undefined)
+          .filter((a) => a)
           .join(" "),
       sync: "yarn install --frozen-lockfile",
       list: (package) => `yarn list --pattern ${package}`,
@@ -73,7 +73,7 @@ function getPackageManagerImplementation(v) {
           isLooseVersion ? undefined : "--save-exact",
           packages,
         ]
-          .filter((a) => a != undefined)
+          .filter((a) => a)
           .join(" "),
       sync: "pnpm install --frozen-lockfile",
       list: (package) => `pnpm list ${package}`,
