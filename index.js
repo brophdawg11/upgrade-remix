@@ -41,28 +41,40 @@ function getPackageManagerImplementation(v) {
   const implementations = {
     npm: {
       install: (packages, isDev) =>
-        "npm install " +
-        (isDev ? "--save-dev " : "--save ") +
-        (isLooseVersion ? "" : "--save-exact ") +
-        packages,
+        [
+          "npm install",
+          isDev ? "--save-dev" : "--save",
+          isLooseVersion ? undefined : "--save-exact",
+          packages,
+        ]
+          .filter((a) => a)
+          .join(" "),
       sync: "npm ci",
       list: (package) => `npm ls ${package}`,
     },
     yarn: {
       install: (packages, isDev) =>
-        "yarn add " +
-        (isDev ? "--dev " : "") +
-        (isLooseVersion ? "" : "--exact ") +
-        packages,
+        [
+          "yarn add",
+          isDev ? "--dev " : undefined,
+          isLooseVersion ? undefined : "--exact",
+          packages,
+        ]
+          .filter((a) => a)
+          .join(" "),
       sync: "yarn install --frozen-lockfile",
       list: (package) => `yarn list --pattern ${package}`,
     },
     pnpm: {
       install: (packages, isDev) =>
-        "pnpm add " +
-        (isDev ? "--save-dev " : "") +
-        (isLooseVersion ? "" : "--save-exact ") +
-        packages,
+        [
+          "pnpm add",
+          isDev ? "--save-dev " : undefined,
+          isLooseVersion ? undefined : "--save-exact",
+          packages,
+        ]
+          .filter((a) => a)
+          .join(" "),
       sync: "pnpm install --frozen-lockfile",
       list: (package) => `pnpm list ${package}`,
     },
