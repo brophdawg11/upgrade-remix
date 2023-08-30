@@ -58,7 +58,7 @@ function getPackageManagerImplementation(v) {
       install: (packages, isDev) =>
         [
           "yarn add",
-          isDev ? "--dev " : undefined,
+          isDev ? "--dev" : undefined,
           isLooseVersion ? undefined : "--exact",
           packages,
         ]
@@ -71,7 +71,7 @@ function getPackageManagerImplementation(v) {
       install: (packages, isDev) =>
         [
           "pnpm add",
-          isDev ? "--save-dev " : undefined,
+          isDev ? "--save-dev" : undefined,
           isLooseVersion ? undefined : "--save-exact",
           packages,
         ]
@@ -82,10 +82,15 @@ function getPackageManagerImplementation(v) {
     },
     bun: {
       install: (packages, isDev) =>
-        "bun add " +
-        (isDev ? "--dev " : "") +
-        (isLooseVersion ? "" : "--exact ") +
-        packages,
+        [
+          "bun add",
+          isDev ? "--dev" : undefined,
+          isLooseVersion ? undefined : "--exact",
+          packages,
+        ]
+          .filter((a) => a)
+          .join(" "),
+
       sync: `bun install --frozen-lockfile`,
       list: (package) => {
         return `bun pm ls | ${isWindows ? "findstr" : "grep"} ${package}`;
