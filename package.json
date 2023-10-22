@@ -18,5 +18,11 @@
     "url": "https://github.com/brophdawg11/upgrade-remix"
   },
   "author": "matt@brophy.org",
-  "license": "ISC"
+  "license": "ISC",
+  "scripts": {
+    "lint": "eslint --ignore-path .gitignore ."
+  },
+  "devDependencies": {
+    "eslint": "8.52.0"
+  }
 }
