@@ -20,28 +20,40 @@ const { args, version, implementation } = setup();
 if (args["list-versions"]) {
   listVersions();
 } else {
-  upgradePackages();
+  upgradePackages(args["dry-run"]);
 }
 
 function setup() {
   const { values: args, positionals } = parseArgs({
     options: {
+      "dry-run": {
+        type: "boolean",
+        short: "d",
+      },
       "list-versions": {
         type: "boolean",
         short: "l",
+      },
+      "package-manager": {
+        type: "string",
+        short: "p",
       },
     },
     allowPositionals: true,
   });
   const version = positionals[0] || "latest";
-  const implementation = getPackageManagerImplementation(version);
+  const implementation = getPackageManagerImplementation(
+    version,
+    args["package-manager"]
+  );
   return { args, version, implementation };
 }
 
-function getPackageManagerImplementation(v) {
+function getPackageManagerImplementation(v, packageManagerFlag) {
   const isLooseVersion = /^[\^~]/.test(v);
   const implementations = {
     npm: {
+      lockFile: "package-lock.json",
       install: (packages, isDev) =>
         [
           "npm install",
@@ -55,6 +67,7 @@ function getPackageManagerImplementation(v) {
       list: (package) => `npm ls ${package}`,
     },
     yarn: {
+      lockFile: "yarn.lock",
       install: (packages, isDev) =>
         [
           "yarn add",
@@ -68,6 +81,7 @@ function getPackageManagerImplementation(v) {
       list: (package) => `yarn list --pattern ${package}`,
     },
     pnpm: {
+      lockFile: "pnpm-lock.yaml",
       install: (packages, isDev) =>
         [
           "pnpm add",
@@ -81,6 +95,7 @@ function getPackageManagerImplementation(v) {
       list: (package) => `pnpm list ${package}`,
     },
     bun: {
+      lockFile: "bun.lockb",
       install: (packages, isDev) =>
         [
           "bun add",
@@ -98,21 +113,20 @@ function getPackageManagerImplementation(v) {
     },
   };
 
-  if (fs.existsSync(path.join(process.cwd(), "package-lock.json"))) {
-    console.log("Found package-lock.json, using npm");
-    return implementations.npm;
-  } else if (fs.existsSync(path.join(process.cwd(), "yarn.lock"))) {
-    console.log("Found yarn.lock, using yarn");
-    return implementations.yarn;
-  } else if (fs.existsSync(path.join(process.cwd(), "pnpm-lock.yaml"))) {
-    console.log("Found pnpm-lock.yaml, using pnpm");
-    return implementations.pnpm;
-  } else if (fs.existsSync(path.join(process.cwd(), "bun.lockb"))) {
-    console.log("Found bun.lockb, using bun");
-    return implementations.bun;
-  } else {
+  const implementation = packageManagerFlag
+    ? implementations[packageManagerFlag]
+    : Object.values(implementations).find((impl) => {
+        if (fs.existsSync(path.join(process.cwd(), impl.lockFile))) {
+          console.log(`Found ${impl.lockFile}, using ${name}`);
+          return true;
+        }
+      });
+
+  if (!implementation) {
     throw new Error("Unsupported Package Manager");
   }
+
+  return implementation;
 }
 
 function getDeps(deps) {
@@ -142,10 +156,15 @@ function listVersions() {
   });
 }
 
-function upgradePackages() {
-  console.log(
-    `Updating remix packages in "${packageJsonPath}" to version "${version}"`
-  );
+function upgradePackages(dryRun) {
+  if (dryRun) {
+    console.log(`SKIPPING package updates due to --dry-run"`);
+    console.log(`  detected package.json file: ${packageJsonPath}`);
+  } else {
+    console.log(
+      `Updating remix packages in "${packageJsonPath}" to version "${version}"`
+    );
+  }
   const packageJson = require(packageJsonPath);
 
   function installUpdates(deps, isDev) {
@@ -153,7 +172,12 @@ function upgradePackages() {
       .map((k) => `${k}@${version}`)
       .join(" ");
     const cmd = implementation.install(packages, isDev);
-    console.log(`Executing: ${cmd}`);
+    if (dryRun) {
+      console.log(`SKIPPING install command due to --dry-run:`);
+      console.log(`  ${cmd}`);
+    } else {
+      console.log(`Executing: ${cmd}`);
+    }
     childProcess.execSync(cmd);
   }
 
@@ -161,6 +185,8 @@ function upgradePackages() {
   installUpdates(packageJson.devDependencies, true);
 
   const syncCmd = implementation.sync;
-  console.log(`Running '${syncCmd}' to sync up all deps`);
-  childProcess.execSync(syncCmd);
+  if (!dryRun) {
+    console.log(`Running '${syncCmd}' to sync up all deps`);
+    childProcess.execSync(syncCmd);
+  }
 }
