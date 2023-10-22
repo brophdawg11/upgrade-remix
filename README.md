@@ -26,6 +26,26 @@ PR's welcome to support additional package managers!
 > npx upgrade-remix pre
 ```
 
+#### Arguments
+
+The following arguments can be passed to `upgrade-remix`:
+
+**`--dry-run`/`-d`**
+
+Setting `--dry-run` will avoid making any changes and will instead print out the install commands it would otherwise have run:
+
+```sh
+npx upgrade-remix --dry-run
+```
+
+**`--package-manager`/`-p`**
+
+`upgrade-remix` will try to detect the package manager by looking for a lockfile in the current working directory, but in monorepo setups you may have the lockfile elsewhere so automatic package manager detection may fail. You may use this flag to be explicit about your your package manager:
+
+```sh
+npx upgrade-remix --package-manager npm
+```
+
 ### Listing Packages
 
 You can also use `upgrade-remix` to list currently installed Remix packages to ensure they are synced up and/or de-duped accordingly:
