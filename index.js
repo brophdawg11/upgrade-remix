@@ -114,7 +114,7 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
   };
 
   const implementation = packageManagerFlag
-    ? implementations[packageManagerFlag]
+    ? [packageManagerFlag, implementations[packageManagerFlag]]
     : Object.entries(implementations).find(([name, impl]) => {
         if (fs.existsSync(path.join(process.cwd(), impl.lockFile))) {
           console.log(`Found ${impl.lockFile}, using ${name}`);
