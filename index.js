@@ -115,7 +115,7 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
 
   const implementation = packageManagerFlag
     ? implementations[packageManagerFlag]
-    : Object.values(implementations).find((impl) => {
+    : Object.entries(implementations).find(([name, impl]) => {
         if (fs.existsSync(path.join(process.cwd(), impl.lockFile))) {
           console.log(`Found ${impl.lockFile}, using ${name}`);
           return true;
@@ -126,7 +126,7 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
     throw new Error("Unsupported Package Manager");
   }
 
-  return implementation;
+  return implementation[1];
 }
 
 function getDeps(deps) {
