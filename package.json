@@ -11,7 +11,7 @@
     "npm"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=18.3.0"
   },
   "repository": {
     "type": "git",
