@@ -2,7 +2,8 @@
 
 `upgrade-remix` is a CLI utility to update/list all of your [Remix](https://remix.run) or [React Router](https://reactrouter.com) dependencies together.
 
-> ![WARNING]
+> [!WARNING]
+> 
 > Support has been added for React Router v7 since this is a familiar flow for Remix v2 users. This tool can only update within a Remix v2 app or within a React Router v7 app. It **does not** handle updating from Remix v2 to React Router v7 since it never _changes_ the existing dependencies, it only updates their versions.
 
 **Supported Package Managers**
