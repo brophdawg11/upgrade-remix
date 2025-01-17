@@ -13,14 +13,16 @@ if (!fs.existsSync(packageJsonPath)) {
   );
 }
 
+const packageJson = require(packageJsonPath);
+
 let isWindows = process.platform === "win32";
 
-const { args, version, implementation } = setup();
+const { args, version, implementation, framework } = setup();
 
 if (args["list-versions"]) {
   listVersions();
 } else {
-  upgradePackages(args["dry-run"]);
+  upgradePackages(args);
 }
 
 function setup() {
@@ -30,13 +32,21 @@ function setup() {
         type: "boolean",
         short: "d",
       },
-      "list-versions": {
+      force: {
+        type: "boolean",
+        short: "f",
+      },
+      list: {
         type: "boolean",
         short: "l",
       },
       "package-manager": {
         type: "string",
         short: "p",
+      },
+      "no-sync": {
+        type: "boolean",
+        short: "s",
       },
     },
     allowPositionals: true,
@@ -46,19 +56,27 @@ function setup() {
     version,
     args["package-manager"]
   );
-  return { args, version, implementation };
+  const framework = packageJson.dependencies["@remix-run/react"]
+    ? "remix"
+    : packageJson.dependencies["react-router"]
+    ? "react-router"
+    : null;
+
+  console.log(`Detected ${framework} application`);
+  return { args, version, implementation, framework };
 }
 
 function getPackageManagerImplementation(v, packageManagerFlag) {
-  const isLooseVersion = /^[\^~]/.test(v);
+  const isExact = !/^[\^~]/.test(v);
   const implementations = {
     npm: {
       lockFile: "package-lock.json",
-      install: (packages, isDev) =>
+      install: (packages, force, isDev) =>
         [
           "npm install",
+          force ? "--force" : undefined,
           isDev ? "--save-dev" : "--save",
-          isLooseVersion ? undefined : "--save-exact",
+          isExact ? "--save-exact" : undefined,
           packages,
         ]
           .filter((a) => a)
@@ -68,11 +86,12 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
     },
     yarn: {
       lockFile: "yarn.lock",
-      install: (packages, isDev) =>
+      install: (packages, force, isDev) =>
         [
           "yarn add",
+          force ? "--force" : undefined,
           isDev ? "--dev" : undefined,
-          isLooseVersion ? undefined : "--exact",
+          isExact ? "--exact" : undefined,
           packages,
         ]
           .filter((a) => a)
@@ -82,11 +101,12 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
     },
     pnpm: {
       lockFile: "pnpm-lock.yaml",
-      install: (packages, isDev) =>
+      install: (packages, force, isDev) =>
         [
           "pnpm add",
+          force ? "--force" : undefined,
           isDev ? "--save-dev" : undefined,
-          isLooseVersion ? undefined : "--save-exact",
+          isExact ? "--save-exact" : undefined,
           packages,
         ]
           .filter((a) => a)
@@ -96,11 +116,12 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
     },
     bun: {
       lockFile: "bun.lockb",
-      install: (packages, isDev) =>
+      install: (packages, force, isDev) =>
         [
           "bun add",
+          force ? "--force" : undefined,
           isDev ? "--dev" : undefined,
-          isLooseVersion ? undefined : "--exact",
+          isExact ? "--exact" : undefined,
           packages,
         ]
           .filter((a) => a)
@@ -130,23 +151,33 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
 }
 
 function getDeps(deps) {
-  return Object.keys(deps || {}).filter(
-    (k) =>
-      (k.startsWith("@remix-run/") || k === "remix") &&
-      !k.startsWith("@remix-run/v1-") &&
-      k !== "@remix-run/router"
-  );
+  if (framework === "remix") {
+    return Object.keys(deps || {}).filter(
+      (k) =>
+        (k.startsWith("@remix-run/") || k === "remix") &&
+        !k.startsWith("@remix-run/v1-") &&
+        k !== "@remix-run/router"
+    );
+  } else if (framework === "react-router") {
+    return Object.keys(deps || {}).filter(
+      (k) =>
+        k.startsWith("@react-router/") ||
+        k === "react-router" ||
+        k === "react-router-dom"
+    );
+  }
+  throw new Error("Unable to detect if this is a Remix or a React Router app");
 }
 
 function listVersions() {
   console.log(`Listing remix packages in "${packageJsonPath}"`);
-  const packageJson = require(packageJsonPath);
+  const { dependencies, devDependencies } = require(packageJsonPath);
   let deps = [
-    ...getDeps(packageJson.dependencies),
-    ...getDeps(packageJson.devDependencies),
-    "@remix-run/router",
-    "react-router",
-    "react-router-dom",
+    ...getDeps(dependencies),
+    ...getDeps(devDependencies),
+    ...(dependencies["react-router"] ? ["react-router"] : []),
+    ...(dependencies["react-router-dom"] ? ["react-router-dom"] : []),
+    ...(dependencies["@remix-run/router"] ? ["@remix-run/router"] : []),
   ];
   deps.forEach((dep) => {
     let cmd = implementation.list(dep);
@@ -156,23 +187,24 @@ function listVersions() {
   });
 }
 
-function upgradePackages(dryRun) {
-  if (dryRun) {
-    console.log(`SKIPPING package updates due to --dry-run"`);
-    console.log(`  detected package.json file: ${packageJsonPath}`);
+function upgradePackages(args) {
+  if (args.dryRun) {
+    console.log(`⚠️ Skipping package updates due to --dry-run"`);
+    console.log(
+      ` - Would have updated ${framework} packages in "${packageJsonPath}" to version "${version}"`
+    );
   } else {
     console.log(
-      `Updating remix packages in "${packageJsonPath}" to version "${version}"`
+      `Updating ${framework} packages in "${packageJsonPath}" to version "${version}"`
     );
   }
-  const packageJson = require(packageJsonPath);
 
-  function installUpdates(deps, isDev) {
+  function installUpdates(deps, force, isDev) {
     const packages = getDeps(deps)
       .map((k) => `${k}@${version}`)
       .join(" ");
-    const cmd = implementation.install(packages, isDev);
-    if (dryRun) {
+    const cmd = implementation.install(packages, force, isDev);
+    if (args.dryRun) {
       console.log(`SKIPPING install command due to --dry-run:`);
       console.log(`  ${cmd}`);
     } else {
@@ -181,11 +213,11 @@ function upgradePackages(dryRun) {
     childProcess.execSync(cmd);
   }
 
-  installUpdates(packageJson.dependencies, false);
-  installUpdates(packageJson.devDependencies, true);
+  installUpdates(packageJson.dependencies, args.force, false);
+  installUpdates(packageJson.devDependencies, args.force, true);
 
   const syncCmd = implementation.sync;
-  if (!dryRun) {
+  if (!args["no-sync"] && !args.dryRun) {
     console.log(`Running '${syncCmd}' to sync up all deps`);
     childProcess.execSync(syncCmd);
   }
