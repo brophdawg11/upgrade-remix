@@ -56,11 +56,11 @@ function setup() {
     version,
     args["package-manager"]
   );
-  const framework = packageJson.dependencies["@remix-run/react"]
-    ? "remix"
-    : packageJson.dependencies["react-router"]
-    ? "react-router"
-    : null;
+  const allDeps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+  const framework = 
+    allDeps["@remix-run/react"] ? "remix" : 
+    allDeps["react-router"] ? "react-router" : 
+    null;
 
   console.log(`Detected ${framework} application`);
   return { args, version, implementation, framework };
