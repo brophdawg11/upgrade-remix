@@ -1,6 +1,6 @@
 {
   "name": "upgrade-remix",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Command line utility to upgrade all Remix/React Router dependencies together",
   "main": "index.js",
   "bin": "index.js",
