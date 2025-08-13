@@ -56,11 +56,15 @@ function setup() {
     version,
     args["package-manager"]
   );
-  const allDeps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-  const framework = 
-    allDeps["@remix-run/react"] ? "remix" : 
-    allDeps["react-router"] ? "react-router" : 
-    null;
+  const allDeps = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+  };
+  const framework = allDeps["@remix-run/react"]
+    ? "remix"
+    : allDeps["react-router"]
+    ? "react-router"
+    : null;
 
   console.log(`Detected ${framework} application`);
   return { args, version, implementation, framework };
@@ -199,18 +203,24 @@ function upgradePackages(args) {
     );
   }
 
-  function installUpdates(deps, force, isDev) {
-    const packages = getDeps(deps)
-      .map((k) => `${k}@${version}`)
-      .join(" ");
+  function installUpdates(_deps, force, isDev) {
+    let deps = getDeps(_deps);
+    if (deps.length === 0) {
+      console.log(
+        `No packages to update in ${isDev ? "devDependencies" : "dependencies"}`
+      );
+      return;
+    }
+
+    const packages = deps.map((k) => `${k}@${version}`).join(" ");
     const cmd = implementation.install(packages, force, isDev);
     if (args.dryRun) {
       console.log(`SKIPPING install command due to --dry-run:`);
       console.log(`  ${cmd}`);
     } else {
       console.log(`Executing: ${cmd}`);
+      childProcess.execSync(cmd);
     }
-    childProcess.execSync(cmd);
   }
 
   installUpdates(packageJson.dependencies, args.force, false);
