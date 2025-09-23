@@ -32,10 +32,6 @@ function setup() {
         type: "boolean",
         short: "d",
       },
-      force: {
-        type: "boolean",
-        short: "f",
-      },
       list: {
         type: "boolean",
         short: "l",
@@ -223,8 +219,8 @@ function upgradePackages(args) {
     }
   }
 
-  installUpdates(packageJson.dependencies, args.force, false);
-  installUpdates(packageJson.devDependencies, args.force, true);
+  installUpdates(packageJson.dependencies, true, false);
+  installUpdates(packageJson.devDependencies, true, true);
 
   const syncCmd = implementation.sync;
   if (!args["no-sync"] && !args.dryRun) {
