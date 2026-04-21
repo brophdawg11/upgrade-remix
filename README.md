@@ -28,6 +28,9 @@ PR's welcome to support additional package managers!
 # Or you can specify a specific version or tag
 > npx upgrade-remix 1.16.0
 > npx upgrade-remix pre
+
+# Or a react-router preview build branch
+> npx upgrade-remix preview/pr-12345
 ```
 
 #### Arguments
@@ -42,20 +45,12 @@ Setting `--dry-run` will avoid making any changes and will instead print out the
 npx upgrade-remix --dry-run
 ```
 
-**`--force`/`-f`**
-
-Setting `--force` will apply the `--force` flag to the underlying install commands. This can be useful to ignore `peerDependency` issues that can arise while updating `dependencies`/`devDependencies` without yet having updated the other one.
-
-```sh
-npx upgrade-remix --force
-```
-
 **`--no-sync`/`-s`**
 
 Setting `--no-sync` will skip running the command at the end to sync up all dependencies (`npm ci`, `yarn install --frozen-lockfile`, etc.).
 
 ```sh
-npx upgrade-remix --force
+npx upgrade-remix --no-sync
 ```
 
 **`--package-manager`/`-p`**
