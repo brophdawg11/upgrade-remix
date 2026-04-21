@@ -6,17 +6,16 @@ const { parseArgs } = require("node:util");
 const childProcess = require("child_process");
 
 const packageJsonPath = path.join(process.cwd(), "package.json");
+
 if (!fs.existsSync(packageJsonPath)) {
   throw new Error(
     "Could not find a package.json file! " +
-      "Please run `npx upgrade-remix` from your root Remix app directory."
+      "Please run `npx upgrade-remix` from your root React-Router/Remix app directory.",
   );
 }
 
 const packageJson = require(packageJsonPath);
-
-let isWindows = process.platform === "win32";
-
+const isWindows = process.platform === "win32";
 const { args, version, implementation, framework } = setup();
 
 if (args["list-versions"]) {
@@ -49,8 +48,8 @@ function setup() {
   });
   const version = positionals[0] || "latest";
   const implementation = getPackageManagerImplementation(
+    args["package-manager"],
     version,
-    args["package-manager"]
   );
   const allDeps = {
     ...packageJson.dependencies,
@@ -59,22 +58,22 @@ function setup() {
   const framework = allDeps["@remix-run/react"]
     ? "remix"
     : allDeps["react-router"]
-    ? "react-router"
-    : null;
+      ? "react-router"
+      : null;
 
   console.log(`Detected ${framework} application`);
   return { args, version, implementation, framework };
 }
 
-function getPackageManagerImplementation(v, packageManagerFlag) {
-  const isExact = !/^[\^~]/.test(v);
+function getPackageManagerImplementation(packageManagerFlag, version) {
+  let isExact = !/^[\^~]/.test(version);
   const implementations = {
     npm: {
+      name: "npm",
       lockFile: "package-lock.json",
-      install: (packages, force, isDev) =>
+      install: (packages, isDev) =>
         [
-          "npm install",
-          force ? "--force" : undefined,
+          "npm install --force",
           isDev ? "--save-dev" : "--save",
           isExact ? "--save-exact" : undefined,
           packages,
@@ -83,13 +82,14 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
           .join(" "),
       sync: "npm ci",
       list: (package) => `npm ls ${package}`,
+      remove: (packages) => `npm uninstall ${packages}`,
     },
     yarn: {
+      name: "yarn",
       lockFile: "yarn.lock",
-      install: (packages, force, isDev) =>
+      install: (packages, isDev) =>
         [
-          "yarn add",
-          force ? "--force" : undefined,
+          "yarn add --force",
           isDev ? "--dev" : undefined,
           isExact ? "--exact" : undefined,
           packages,
@@ -98,13 +98,14 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
           .join(" "),
       sync: "yarn install --frozen-lockfile",
       list: (package) => `yarn list --pattern ${package}`,
+      remove: (packages) => `yarn remove ${packages}`,
     },
     pnpm: {
+      name: "pnpm",
       lockFile: "pnpm-lock.yaml",
-      install: (packages, force, isDev) =>
+      install: (packages, isDev) =>
         [
-          "pnpm add",
-          force ? "--force" : undefined,
+          "pnpm add --force",
           isDev ? "--save-dev" : undefined,
           isExact ? "--save-exact" : undefined,
           packages,
@@ -113,13 +114,14 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
           .join(" "),
       sync: "pnpm install --frozen-lockfile",
       list: (package) => `pnpm list ${package}`,
+      remove: (packages) => `pnpm remove ${packages}`,
     },
     bun: {
+      name: "bun",
       lockFile: "bun.lockb",
-      install: (packages, force, isDev) =>
+      install: (packages, isDev) =>
         [
-          "bun add",
-          force ? "--force" : undefined,
+          "bun add --force",
           isDev ? "--dev" : undefined,
           isExact ? "--exact" : undefined,
           packages,
@@ -131,6 +133,7 @@ function getPackageManagerImplementation(v, packageManagerFlag) {
       list: (package) => {
         return `bun pm ls | ${isWindows ? "findstr" : "grep"} ${package}`;
       },
+      remove: (packages) => `bun remove ${packages}`,
     },
   };
 
@@ -156,21 +159,21 @@ function getDeps(deps) {
       (k) =>
         (k.startsWith("@remix-run/") || k === "remix") &&
         !k.startsWith("@remix-run/v1-") &&
-        k !== "@remix-run/router"
+        k !== "@remix-run/router",
     );
   } else if (framework === "react-router") {
     return Object.keys(deps || {}).filter(
       (k) =>
         k.startsWith("@react-router/") ||
         k === "react-router" ||
-        k === "react-router-dom"
+        k === "react-router-dom",
     );
   }
   throw new Error("Unable to detect if this is a Remix or a React Router app");
 }
 
 function listVersions() {
-  console.log(`Listing remix packages in "${packageJsonPath}"`);
+  console.log(`Listing ${framework}} packages in "${packageJsonPath}"`);
   const { dependencies, devDependencies } = require(packageJsonPath);
   let deps = [
     ...getDeps(dependencies),
@@ -191,25 +194,50 @@ function upgradePackages(args) {
   if (args.dryRun) {
     console.log(`⚠️ Skipping package updates due to --dry-run"`);
     console.log(
-      ` - Would have updated ${framework} packages in "${packageJsonPath}" to version "${version}"`
+      ` - Would have updated ${framework} packages in "${packageJsonPath}" to version "${version}"`,
     );
   } else {
     console.log(
-      `Updating ${framework} packages in "${packageJsonPath}" to version "${version}"`
+      `Updating ${framework} packages in "${packageJsonPath}" to version "${version}"`,
     );
   }
 
-  function installUpdates(_deps, force, isDev) {
+  if (version.startsWith("preview/")) {
+    if (implementation.name !== "pnpm") {
+      throw new Error("Preview versions are only supported with pnpm");
+    }
+    if (framework === "remix") {
+      throw new Error("Preview versions are not supported for Remix");
+    }
+  }
+
+  function installUpdates(_deps, isDev) {
     let deps = getDeps(_deps);
     if (deps.length === 0) {
       console.log(
-        `No packages to update in ${isDev ? "devDependencies" : "dependencies"}`
+        `No packages to update in ${isDev ? "devDependencies" : "dependencies"}`,
       );
       return;
     }
 
-    const packages = deps.map((k) => `${k}@${version}`).join(" ");
-    const cmd = implementation.install(packages, force, isDev);
+    const packages = deps
+      .map((k) => {
+        if (version.startsWith("preview/")) {
+          let dir = [
+            "react-router",
+            "react-router-dom",
+            "create-react-router",
+          ].includes(k)
+            ? k
+            : k.replace("@react-router/", "react-router-");
+          return `"${k}@github:remix-run/react-router#${version}&path:packages/${dir}"`;
+        } else {
+          return `${k}@${version}`;
+        }
+      })
+      .join(" ");
+
+    const cmd = implementation.install(packages, isDev);
     if (args.dryRun) {
       console.log(`SKIPPING install command due to --dry-run:`);
       console.log(`  ${cmd}`);
@@ -219,8 +247,29 @@ function upgradePackages(args) {
     }
   }
 
-  installUpdates(packageJson.dependencies, true, false);
-  installUpdates(packageJson.devDependencies, true, true);
+  if (
+    !args.dryRun &&
+    version.startsWith("preview/") &&
+    packageJson.dependencies["react-router"].startsWith("github:")
+  ) {
+    console.log(
+      "Installing a preview build overtop of another preview build can run into pnpm issues.",
+    );
+    console.log(
+      "This will uninstall the current preview builds and then then install the new preview build.",
+    );
+
+    let deps = getDeps({
+      ...packageJson.dependencies,
+      ...packageJson.devDependencies,
+    });
+    const cmd = implementation.remove(deps.join(" "));
+    console.log(`Executing: ${cmd}`);
+    childProcess.execSync(cmd);
+  }
+
+  installUpdates(packageJson.dependencies, false);
+  installUpdates(packageJson.devDependencies, true);
 
   const syncCmd = implementation.sync;
   if (!args["no-sync"] && !args.dryRun) {
